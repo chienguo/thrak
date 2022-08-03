@@ -100,35 +100,34 @@ impl LeafPageElement {
 }
 
 fn merge(a: &Vec<PageId>, b: &Vec<PageId>) -> Vec<PageId> {
-    if a.len() == 0 {
+    if a.is_empty() {
         return b.to_owned();
     }
-    if b.len() == 0 {
+    if b.is_empty() {
         return a.to_owned();
     }
     let mut merged = Vec::with_capacity(a.len() + b.len());
+    for i in 0..(a.len() + b.len()) {
+        merged.insert(i, 0);
+    }
     merge_page_ids(&mut merged, a, b);
     merged
 }
 
-fn merge_page_ids(dst: &mut Vec<PageId>, a: &Vec<PageId>, b: &Vec<PageId>) {
-    if a.len() == 0 {
-        for i in 0..b.len() {
-            dst[i] = b[i];
-        }
+fn merge_page_ids(dst: &mut [PageId], a: &Vec<PageId>, b: &Vec<PageId>) {
+    if a.is_empty() {
+        dst[..b.len()].copy_from_slice(&b[..]);
         return;
     }
-    if b.len() == 0 {
-        for i in 0..a.len() {
-            dst[i] = a[i];
-        }
+    if b.is_empty() {
+        dst[..a.len()].copy_from_slice(&a[..]);
         return;
     }
 
     let mut i = 0;
     let mut j = 0;
     let mut counter = 0;
-    while i <= a.len() && j <= b.len() {
+    while i < a.len() && j < b.len() {
         if a[i] < b[j] {
             dst[counter] = a[i];
             i += 1;
@@ -138,15 +137,27 @@ fn merge_page_ids(dst: &mut Vec<PageId>, a: &Vec<PageId>, b: &Vec<PageId>) {
         }
         counter += 1;
     }
-    if i <= a.len() {
-        for k in i..a.len() {
-            dst[counter] = a[k];
-            counter += 1;
-        }
+    if i == a.len() {
+        dst[counter..].copy_from_slice(&b[j..]);
     } else {
-        for k in j..b.len() {
-            dst[counter] = b[k];
-            counter += 1;
-        }
+        dst[counter..].copy_from_slice(&a[i..])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::page::{merge, PageId};
+
+    #[test]
+    fn test_merge_page_ids() {
+        let a: Vec<PageId> = vec![4, 5, 6, 10, 11, 12, 13, 27];
+        let b: Vec<PageId> = vec![1, 3, 8, 9, 25, 30];
+        let c = merge(&a, &b);
+        assert_eq!(c, vec![1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 25, 27, 30]);
+
+        let a = vec![4, 5, 6, 10, 11, 12, 13, 27, 35, 36];
+        let b = vec![8, 9, 25, 30];
+        let c = merge(&a, &b);
+        assert_eq!(c, vec![4, 5, 6, 8, 9, 10, 11, 12, 13, 25, 27, 30, 35, 36]);
     }
 }
